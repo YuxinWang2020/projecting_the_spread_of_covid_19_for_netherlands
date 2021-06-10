@@ -4,3 +4,6 @@
 .Ruserdata
 *.Rproj
 bld/
+.idea
+.pytask.sqlite3
+**/__pycache__

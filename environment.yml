@@ -1,0 +1,22 @@
+name: projecting_the_spread_of_covid_19_for_netherlands
+channels:
+  - conda-forge
+
+dependencies:
+  - conda-build
+  - ipykernel
+  - jupyterlab
+  - matplotlib
+  - pandas
+  - pip
+  - pytask
+  - pytest
+  - pytest-cov
+  - python=3.8
+  - python-graphviz
+  - virtualenv=20.0.33
+
+  - pip:
+
+    - pre-commit
+    - git+https://github.com/statsmodels/statsmodels
