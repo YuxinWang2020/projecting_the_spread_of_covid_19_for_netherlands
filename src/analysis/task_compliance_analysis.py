@@ -75,7 +75,7 @@ def task_stat_compliance_y_var(depends_on, produces):
     "compliance": BLD / "data" / "liss" / "compliance.pickle"
 })
 @pytask.mark.produces({
-    "regression": BLD / "tables" / "compliance_ordered_logit.csv",
+    "regression": BLD / "tables" / "compliance_ordered_logit.tex",
     "odds_radio": BLD / "tables" / "compliance_ordered_logit_OR.csv"
 })
 def task_compliance_ordinal_regression(depends_on, produces):
@@ -84,7 +84,7 @@ def task_compliance_ordinal_regression(depends_on, produces):
         "compliance": BLD / "data" / "liss" / "compliance.pickle"
     }
     produces = {
-        "regression": BLD / "tables" / "compliance_ordered_logit.csv",
+        "regression": BLD / "tables" / "compliance_ordered_logit.tex",
         "odds_radio": BLD / "tables" / "compliance_ordered_logit_OR.csv"
     }
 
@@ -93,17 +93,12 @@ def task_compliance_ordinal_regression(depends_on, produces):
     merge_data = compliance.join(background, on="personal_id", how="inner")
     merge_data = merge_data.sort_index(level = ['personal_id','month'])
 
-    model_names = merge_data['Month'].drop_duplicates().tolist()
-    results = []
-    odds_radios = []
-    for month in model_names:
-        merge_data_month = merge_data.query("Month == @month")
-        result, summary, odds_radio = _compliance_ordinal_regression(merge_data_month)
-        results.append(result)
-        odds_radios.append(odds_radio)
+    x, y = getXY(merge_data)
+    ordinal_result, _, ordinal_odds_radio = ordinal_logit_regression(x, y)
+    ols_result, _ = ols_regression(x, y)
 
-    formated_odds_radios = odds_radio_format(odds_radios, model_names)
-    formated_result = sm_results_format(results, model_names)
+    formated_odds_radios = odds_radio_format([ordinal_odds_radio], ['Odds Ratio'])
+    formated_result = sm_results_format([ordinal_result, ols_result], ['Ordinal Logit', 'OLS'])
 
     # formated_result.as_latex(produces['regression'], float_format="%.3f")
     with open(produces['regression'], 'w') as f:
@@ -111,7 +106,7 @@ def task_compliance_ordinal_regression(depends_on, produces):
     formated_odds_radios.to_csv(produces['odds_radio'], float_format="%.3f")
 
 
-def _compliance_ordinal_regression(merge_data):
+def getXY(merge_data):
     y = merge_data.loc[:, "compliance_index"]
     x = merge_data[['female', 'living_alone', 'living_with_children']]
 
@@ -122,8 +117,5 @@ def _compliance_ordinal_regression(merge_data):
 
     # add interaction
     # x['edu:tertiary # age:[50, 75)'] = x['age:[50, 75)'] * x['edu:tertiary']
-    x['living_alone # age:[25, 50)'] = x['age:[25, 50)'] * x['living_alone']
-
-    # run regression
-    result, summary, odds_radio = ordinal_logit_regression(x, y)
-    return result, summary, odds_radio
+    # x['living_alone # age:[25, 50)'] = x['age:[25, 50)'] * x['living_alone']
+    return x, y
