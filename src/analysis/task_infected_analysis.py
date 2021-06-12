@@ -2,7 +2,7 @@ import pandas as pd
 import pytask
 
 from src.config import BLD
-from src.model_code.discrete_regression import binomial_logit_regression
+from src.model_code.regression import binomial_logit_regression
 from src.model_code.format_result import sm_results_format
 from src.model_code.format_result import odds_radio_format
 

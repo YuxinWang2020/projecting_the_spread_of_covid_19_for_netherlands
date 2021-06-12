@@ -1,9 +1,10 @@
 import pandas as pd
 import pytask
 
-from src.model_code.discrete_regression import ordinal_logit_regression
+from src.model_code.regression import ordinal_logit_regression
 from src.model_code.format_result import sm_results_format
 from src.model_code.format_result import odds_radio_format
+from src.model_code.regression import ols_regression
 
 from src.config import BLD
 
