@@ -93,7 +93,7 @@ def task_compliance_ordinal_regression(depends_on, produces):
     merge_data = compliance.join(background, on="personal_id", how="inner")
     merge_data = merge_data.sort_index(level = ['personal_id','month'])
 
-    x, y = getXY(merge_data)
+    x, y = _get_compliance_XY(merge_data)
     ordinal_result, _, ordinal_odds_radio = ordinal_logit_regression(x, y)
     ols_result, _ = ols_regression(x, y)
 
@@ -106,7 +106,7 @@ def task_compliance_ordinal_regression(depends_on, produces):
     formated_odds_radios.to_csv(produces['odds_radio'], float_format="%.3f")
 
 
-def getXY(merge_data):
+def _get_compliance_XY(merge_data):
     y = merge_data.loc[:, "compliance_index"]
     x = merge_data[['female', 'living_alone', 'living_with_children']]
 
