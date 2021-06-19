@@ -85,17 +85,27 @@ def task_clean_compliance_data(depends_on, produces):
 @pytask.mark.depends_on(
     {
         month: SRC / "original_data" / "liss" / f"covid_data_{month}.pickle"
-        for month in ["2020_05", "2020_06", "2020_09", "2020_12"]
+        for month in ["2020_02", "2020_05", "2020_06", "2020_09", "2020_12"]
     }
 )
 @pytask.mark.produces(BLD / "data" / "liss" / "work_status.pickle")
 def task_clean_work_status_data(depends_on, produces):
 
     covid_data_list = [pd.read_pickle(wave) for wave in depends_on.values()]
-    covid_data = pd.concat(covid_data_list)
-    select_covid = covid_data[["work_status"]].dropna(axis=0, how='any')
+    covid_data = pd.concat(covid_data_list).reset_index('month')
+    month = covid_data['month'].replace(pd.Timestamp(year=2020, month=2, day=1),
+                                                     pd.Timestamp(year=2020, month=4, day=1))
+    covid_data['month'] = month
+    select_covid = covid_data.set_index(['month'],append=True)[["work_status"]].dropna(axis=0, how='any')
 
-    select_covid['Month'] = select_covid.index.get_level_values('month').month_name()
+    select_covid.loc[:, 'occupation'] = pd.Categorical(select_covid['work_status'].replace({
+        "retired": "unemployed",
+        "homemaker": "unemployed",
+        "student or trainee": "unemployed",
+        "social assistance": "unemployed",
+        "self-employed": "employed"
+    })).reorder_categories(['unemployed','employed'])
+
     select_covid.to_pickle(produces)
 
 @pytask.mark.depends_on(
