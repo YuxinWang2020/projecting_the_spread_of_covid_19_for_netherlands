@@ -4,8 +4,6 @@ import pytask
 from src.config import BLD
 from src.model_code.format_result import odds_radio_format
 from src.model_code.format_result import sm_results_format
-from src.model_code.regression import add_interaction
-from src.model_code.regression import binomial_logit_regression
 from src.model_code.regression import binomial_logit_regression_formula
 
 
@@ -68,41 +66,6 @@ def task_infected_with_compliance_binomial_regression(depends_on, produces):
     # with open(produces['regression'], 'w') as f:
     #     f.write(formated_result.as_latex())
     formated_odds_radios.to_csv(produces["odds_radio"], float_format="%.3f")
-
-
-def _infected_binomial_regression(merge_data):
-    y = merge_data["infected"]
-    x = merge_data[
-        ["compliance_index", "female", "living_alone", "living_with_children"]
-    ]
-
-    # change category to dummy
-    x = x.join(
-        pd.get_dummies(
-            merge_data["edu"].cat.remove_unused_categories(),
-            prefix="edu",
-            drop_first=True,
-            prefix_sep=":",
-        )
-    )
-    x = x.join(
-        pd.get_dummies(
-            merge_data["age_cut"], prefix="age", drop_first=True, prefix_sep=":"
-        )
-    )
-
-    # add interaction
-
-    # x['edu:tertiary # age:[50, 75)'] = x['age:[50, 75)'] * x['edu:tertiary']
-    # x['living_alone # age:[25, 50)'] = x['age:[25, 50)'] * x['living_alone']
-    # add_interaction(x, 'age:[50, 75)', 'edu:tertiary')
-    add_interaction(x, "compliance_index", "edu:upper_secondary")
-    add_interaction(x, "compliance_index", "edu:tertiary")
-    # add_interaction(x, 'compliance_index', 'age:[25, 50)', 'living_alone')
-
-    # run regression
-    result, summary, odds_radio = binomial_logit_regression(x, y)
-    return result, summary, odds_radio
 
 
 def _infected_binomial_regression_formula(merge_data):
