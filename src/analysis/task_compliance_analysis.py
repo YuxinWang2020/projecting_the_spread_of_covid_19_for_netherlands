@@ -1,6 +1,5 @@
 import pandas as pd
 import pytask
-from patsy import dmatrix
 
 from src.config import BLD
 from src.model_code.format_result import odds_radio_format
@@ -27,18 +26,52 @@ def task_stat_compliance_x_var(depends_on, produces):
         pd.read_pickle(depends_on["work_status"])
         .query("month == '2020-04-01'")
         .reset_index(level="month", drop=True)
+        .drop(columns="Month")
     )
     background = pd.read_pickle(depends_on["background"])
     merge_data = compliance.join(background, on="personal_id", how="inner").join(
         work_status, on="personal_id", how="inner"
     )
 
-    x_var = dmatrix(
-        "female + living_alone + living_with_children + age_cut + edu + occupation + income_hh_cut"
-        " + income_hh_cut*living_alone",
-        merge_data,
-        return_type="dataframe",
-    ).drop(columns="Intercept")
+    # x_var = dmatrix(
+    #     "female + living_alone + living_with_children + age_cut + edu + occupation + income_hh_cut"
+    #     " + income_hh_cut*living_alone",
+    #     merge_data,
+    #     return_type="dataframe",
+    # ).drop(columns="Intercept")
+
+    x_var = merge_data[["female", "living_alone", "living_with_children"]]
+
+    # change category to dummy
+    x_var = x_var.join(
+        pd.get_dummies(
+            merge_data["edu"].cat.remove_unused_categories(),
+            prefix="edu",
+            drop_first=False,
+            prefix_sep=":",
+        )
+    )
+    x_var = x_var.join(
+        pd.get_dummies(
+            merge_data["age_cut"], prefix="age", drop_first=False, prefix_sep=":"
+        )
+    )
+    x_var = x_var.join(
+        pd.get_dummies(
+            merge_data["occupation"],
+            prefix="occupation",
+            drop_first=False,
+            prefix_sep=":",
+        )
+    )
+    x_var = x_var.join(
+        pd.get_dummies(
+            merge_data["income_hh_cut"],
+            prefix="income_hh",
+            drop_first=False,
+            prefix_sep=":",
+        )
+    )
 
     x_var = (
         x_var.reset_index(level="personal_id")
@@ -113,6 +146,7 @@ def task_compliance_ordinal_regression(depends_on, produces):
         pd.read_pickle(depends_on["work_status"])
         .query("month == '2020-04-01'")
         .reset_index(level="month", drop=True)
+        .drop(columns="Month")
     )
     background = pd.read_pickle(depends_on["background"])
     merge_data = compliance.join(background, on="personal_id", how="inner").join(
@@ -121,8 +155,9 @@ def task_compliance_ordinal_regression(depends_on, produces):
 
     # run regression
     formula = (
-        "compliance_index ~ female + living_alone + living_with_children + age_cut + "
-        "edu + occupation + income_hh_cut + income_hh_cut*occupation"
+        "compliance_index ~ female + living_alone + living_with_children + age + I(age**2) + "
+        "edu + occupation + net_income_hh_eqv"
+        " + female*edu"
     )
     ordinal_result, _, ordinal_odds_radio = ordinal_logit_regression_formula(
         merge_data, formula
@@ -131,7 +166,7 @@ def task_compliance_ordinal_regression(depends_on, produces):
 
     formed_odds_radios = odds_radio_format([ordinal_odds_radio], ["Odds Ratio"])
     formed_result = sm_results_format(
-        [ordinal_result, ols_result], ["Ordinal Logit", "OLS"]
+        [ordinal_result, ols_result], ["Ordered Logit", "OLS"]
     )
 
     # with open(produces['regression'], 'w') as f:
