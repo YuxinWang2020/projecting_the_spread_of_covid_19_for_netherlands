@@ -257,19 +257,34 @@ def task_clean_work_status_data(depends_on, produces):
 
 @pytask.mark.depends_on(
     {
-        month: SRC / "original_data" / "liss" / f"covid_data_{month}.pickle"
-        for month in ["2020_04"]
+        "covid03": SRC / "original_data" / "liss" / "covid_data_2020_03.pickle",
+        "covid04": SRC / "original_data" / "liss" / "covid_data_2020_04.pickle",
     }
 )
 @pytask.mark.produces(BLD / "data" / "liss" / "essential_worker.pickle")
 def task_clean_essential_worker_data(depends_on, produces):
+    cruciaal = (
+        pd.read_pickle(depends_on["covid04"])
+        .reset_index("month")["essential_worker"]
+        .dropna()
+    )
+    qualify_essential_worker = cruciaal.astype(int).rename("qualify_essential_worker")
+    q10 = (
+        pd.read_pickle(depends_on["covid03"])
+        .reset_index("month")["comply_curfew_self"]
+        .dropna()
+    )
+    working_essential_worker = (
+        q10.eq("critical profession").astype("int").rename("working_essential_worker")
+    )
 
-    covid_data_list = [pd.read_pickle(wave) for wave in depends_on.values()]
-    covid_data = pd.concat(covid_data_list)
-    select_covid = covid_data[["essential_worker"]].dropna(axis=0, how="any")
-
-    select_covid["Month"] = select_covid.index.get_level_values("month").month_name()
-    select_covid.to_pickle(produces)
+    essential_worker = pd.merge(
+        qualify_essential_worker,
+        working_essential_worker,
+        on="personal_id",
+        how="outer",
+    )
+    essential_worker.to_pickle(produces)
 
 
 @pytask.mark.depends_on(SRC / "original_data" / "liss" / "cw19l_EN_3.0p.dta")
