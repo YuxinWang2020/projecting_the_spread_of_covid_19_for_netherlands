@@ -150,8 +150,11 @@ def task_clean_compliance_data(depends_on, produces):
     ].dropna(axis=0, how="any")
     # compliance_index is sum of these compliance variables
     compliance["compliance_index"] = 0
-    loc = (compliance["no_avoidance_behaviors"] != 1) & (
-        compliance["comply_curfew_self"] != "no"
+    loc = (
+        compliance["no_avoidance_behaviors"]
+        != 1
+        #    ) & (
+        # compliance["comply_curfew_self"] != "no"
     )
     compliance.loc[loc, "compliance_index"] = (
         compliance.loc[
@@ -165,13 +168,19 @@ def task_clean_compliance_data(depends_on, produces):
                 "quarantine_no_symptoms",
             ],
         ]
-        # .dot(pd.Series({"avoid_busy_places": 1,
-        #                 "avoid_public_places": 1,
-        #                 "maintain_distance": 1,
-        #                 "adjust_school_work": 2,
-        #                 "quarantine_symptoms": 5,
-        #                 "quarantine_no_symptoms": 6}))
-        .sum(axis="columns").astype(int)
+        .dot(
+            pd.Series(
+                {
+                    "avoid_busy_places": 1,
+                    "avoid_public_places": 1,
+                    "maintain_distance": 1,
+                    "adjust_school_work": 1,
+                    "quarantine_symptoms": 1,
+                    "quarantine_no_symptoms": 1,
+                }
+            )
+        )
+        .astype(int)
     )
 
     compliance["Month"] = compliance.index.get_level_values("month").month_name()
