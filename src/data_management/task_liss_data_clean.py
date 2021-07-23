@@ -305,3 +305,201 @@ def task_clean_industry_data(depends_on, produces):
     )
 
     industry_data.to_pickle(produces)
+
+
+@pytask.mark.depends_on(SRC / "original_data" / "liss" / "cp21m_EN_1.0p.dta")
+@pytask.mark.produces(BLD / "data" / "liss" / "personality.pickle")
+def task_clean_personality_data(depends_on, produces):
+    ori_data = pd.read_stata(depends_on)
+    ori_data.insert(0, "personal_id", ori_data["nomem_encr"].astype(int))
+    ori_data.set_index(["personal_id"], inplace=True)
+
+    big_5 = ori_data[["cp21m0" + str(i) for i in range(20, 70)]].rename(
+        columns={
+            "cp21m020": "am the life of the party",
+            "cp21m021": "feel little concern for others",
+            "cp21m022": "am always prepared",
+            "cp21m023": "get stressed out easily",
+            "cp21m024": "have a rich vocabulary",
+            "cp21m025": "don't talk a lot",
+            "cp21m026": "am interested in people",
+            "cp21m027": "leave my belongings around",
+            "cp21m028": "am relaxed most of the time",
+            "cp21m029": "have difficulty understanding abstract ideas",
+            "cp21m030": "feel comfortable around people",
+            "cp21m031": "insult people",
+            "cp21m032": "pay attention to details",
+            "cp21m033": "worry about things",
+            "cp21m034": "have a vivid imagination",
+            "cp21m035": "keep in the background",
+            "cp21m036": "sympathize with others' feelings",
+            "cp21m037": "make a mess of things",
+            "cp21m038": "seldom feel blue",
+            "cp21m039": "am not interested in abstract ideas",
+            "cp21m040": "start conversations",
+            "cp21m041": "am not interested in other people's problems",
+            "cp21m042": "get chores done right away",
+            "cp21m043": "am easily disturbed",
+            "cp21m044": "have excellent ideas",
+            "cp21m045": "have little to say",
+            "cp21m046": "have a soft heart",
+            "cp21m047": "often forget to put things back in their proper place",
+            "cp21m048": "get upset easily",
+            "cp21m049": "do not have a good imagination",
+            "cp21m050": "talk to a lot of different people at parties",
+            "cp21m051": "am not really interested in others",
+            "cp21m052": "like order",
+            "cp21m053": "change my mood a lot",
+            "cp21m054": "am quick to understand things",
+            "cp21m055": "don't like to draw attention to myself",
+            "cp21m056": "take time out for others",
+            "cp21m057": "shirk my duties",
+            "cp21m058": "have frequent mood swings",
+            "cp21m059": "use difficult words",
+            "cp21m060": "don't mind being the center of attention",
+            "cp21m061": "feel others' emotions",
+            "cp21m062": "follow a schedule",
+            "cp21m063": "get irritated easily",
+            "cp21m064": "spend time reflecting on things",
+            "cp21m065": "am quiet around strangers",
+            "cp21m066": "make people feel at ease",
+            "cp21m067": "am exacting in my work",
+            "cp21m068": "often feel blue",
+            "cp21m069": "am full of ideas",
+        }
+    )
+
+    extraversion = (
+        big_5["am the life of the party"].cat.codes
+        + big_5["feel comfortable around people"].cat.codes
+        + big_5["start conversations"].cat.codes
+        + big_5["talk to a lot of different people at parties"].cat.codes
+        + big_5["don't mind being the center of attention"].cat.codes
+        - big_5["don't talk a lot"].cat.codes
+        - big_5["keep in the background"].cat.codes
+        - big_5["have little to say"].cat.codes
+        - big_5["don't like to draw attention to myself"].cat.codes
+        - big_5["am quiet around strangers"].cat.codes
+    )
+    openness = (
+        big_5["have a rich vocabulary"].cat.codes
+        + big_5["have a vivid imagination"].cat.codes
+        + big_5["have excellent ideas"].cat.codes
+        + big_5["am quick to understand things"].cat.codes
+        + big_5["use difficult words"].cat.codes
+        + big_5["spend time reflecting on things"].cat.codes
+        + big_5["am full of ideas"].cat.codes
+        - big_5["have difficulty understanding abstract ideas"].cat.codes
+        - big_5["am not interested in abstract ideas"].cat.codes
+        - big_5["do not have a good imagination"].cat.codes
+    )
+    conscientiousness = (
+        big_5["am always prepared"].cat.codes
+        + big_5["pay attention to details"].cat.codes
+        + big_5["get chores done right away"].cat.codes
+        + big_5["like order"].cat.codes
+        + big_5["follow a schedule"].cat.codes
+        + big_5["am exacting in my work"].cat.codes
+        - big_5["leave my belongings around"].cat.codes
+        - big_5["make a mess of things"].cat.codes
+        - big_5["often forget to put things back in their proper place"].cat.codes
+        - big_5["shirk my duties"].cat.codes
+    )
+    agreeableness = (
+        big_5["am interested in people"].cat.codes
+        + big_5["sympathize with others' feelings"].cat.codes
+        + big_5["have a soft heart"].cat.codes
+        + big_5["take time out for others"].cat.codes
+        + big_5["feel others' emotions"].cat.codes
+        + big_5["make people feel at ease"].cat.codes
+        - big_5["am not really interested in others"].cat.codes
+        - big_5["insult people"].cat.codes
+        - big_5["am not interested in other people's problems"].cat.codes
+        - big_5["feel little concern for others"].cat.codes
+    )
+    neuroticism = (
+        -big_5["am relaxed most of the time"].cat.codes
+        - big_5["seldom feel blue"].cat.codes
+        + big_5["get stressed out easily"].cat.codes
+        + big_5["worry about things"].cat.codes
+        + big_5["am easily disturbed"].cat.codes
+        + big_5["get upset easily"].cat.codes
+        + big_5["change my mood a lot"].cat.codes
+        + big_5["have frequent mood swings"].cat.codes
+        + big_5["get irritated easily"].cat.codes
+        + big_5["often feel blue"].cat.codes
+    )
+
+    personality = pd.DataFrame(
+        {
+            "extraversion": extraversion,
+            "openness": openness,
+            "conscientiousness": conscientiousness,
+            "agreeableness": agreeableness,
+            "neuroticism": neuroticism,
+        }
+    )
+    personality.to_pickle(produces)
+
+
+@pytask.mark.depends_on(SRC / "original_data" / "liss" / "cv21m_EN_1.0p.dta")
+@pytask.mark.produces(BLD / "data" / "liss" / "politics.pickle")
+def task_clean_politics_data(depends_on, produces):
+    ori_data = pd.read_stata(depends_on)
+    ori_data.insert(0, "personal_id", ori_data["nomem_encr"].astype(int))
+    ori_data.set_index(["personal_id"], inplace=True)
+
+    # 0 ("Left") to 10 ("Right").
+    ideology = (
+        ori_data["cv21m101"]
+        .rename("ideology")
+        .replace("I dont know", np.nan)
+        .cat.remove_unused_categories()
+        .cat.codes
+    )
+
+    politics = pd.DataFrame({"ideology": ideology})
+    politics.to_pickle(produces)
+
+
+@pytask.mark.depends_on(
+    {
+        "god": SRC / "original_data" / "liss" / "mb15a_EN_1.1p.dta",
+        "covid03": SRC / "original_data" / "liss" / "covid_data_2020_03.pickle",
+    }
+)
+@pytask.mark.produces(BLD / "data" / "liss" / "trust.pickle")
+def task_trust_data(depends_on, produces):
+    god_data = pd.read_stata(depends_on["god"])
+    god_data.insert(0, "personal_id", god_data["nomem_encr"].astype(int))
+    god_data.set_index(["personal_id"], inplace=True)
+    covid03_data = pd.read_pickle(depends_on["covid03"]).reset_index("month")
+
+    # 1 = no trust at all 10 = complete trust
+    trust_institutions = (
+        god_data[["mb15a011", "mb15a013"]]
+        .rename(
+            columns={"mb15a011": "trust_science", "mb15a013": "trust_political_parties"}
+        )
+        .replace("don't know / no opinion", np.nan)
+    )
+    trust_institutions["trust_science"] = (
+        trust_institutions["trust_science"].cat.remove_unused_categories().cat.codes / 2
+    )
+    trust_institutions["trust_political_parties"] = (
+        trust_institutions["trust_political_parties"]
+        .cat.remove_unused_categories()
+        .cat.codes
+        / 2
+    )
+
+    trust_gov = (
+        covid03_data["trust_gov"]
+        .cat.remove_unused_categories()
+        .cat.codes.rename("trust_gov")
+    )
+
+    trust = pd.merge(
+        trust_institutions, trust_gov, on="personal_id", how="outer"
+    ).dropna(how="all")
+    trust.to_pickle(produces)
