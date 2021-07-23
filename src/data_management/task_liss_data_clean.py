@@ -110,6 +110,20 @@ def task_clean_infected_data(depends_on, produces):
     select_covid["infected"] = select_covid["infection_diagnosed"].eq("yes").astype(int)
 
     select_covid["Month"] = select_covid.index.get_level_values("month").month_name()
+
+    infected_wide = select_covid["infection_diagnosed"].cat.codes.unstack()
+    for i in range(infected_wide.shape[0]):
+        for j in range(infected_wide.shape[1] - 1, 0, -1):
+            if infected_wide.iloc[i, j] <= infected_wide.iloc[i, j - 1]:
+                infected_wide.iloc[i, j] = 0
+    new_infected = (
+        infected_wide.stack()
+        .rename("new_infected")
+        .astype("category")
+        .cat.rename_categories(["no", "unsure", "yes"])
+        .cat.reorder_categories(["no", "unsure", "yes"], ordered=True)
+    )
+    select_covid = select_covid.join(new_infected)
     select_covid.to_pickle(produces)
 
 
