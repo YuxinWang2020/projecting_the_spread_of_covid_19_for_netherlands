@@ -11,7 +11,6 @@ from src.config import SRC
 )
 @pytask.mark.produces(BLD / "data" / "liss" / "background.pickle")
 def task_clean_background_data(depends_on, produces):
-
     background = pd.read_pickle(depends_on)
     select_background = background[
         [
@@ -43,7 +42,8 @@ def task_clean_background_data(depends_on, produces):
     ).astype(
         int
     )  # 1: has children, 0: no children
-    select_background["age"] = select_background["age"].astype("int") / 100
+    select_background["age"] = select_background["age"].astype("int")
+    select_background["age_by100"] = select_background["age"] / 100
     select_background["hh_id"] = select_background["hh_id"].astype("int")
     select_background["female"] = select_background["female"].astype("int")
     select_background["log_income_hh"] = np.log(
@@ -96,15 +96,16 @@ def task_clean_background_data(depends_on, produces):
 )
 @pytask.mark.produces(BLD / "data" / "liss" / "infected.pickle")
 def task_clean_infected_data(depends_on, produces):
-
     covid_data_list = [pd.read_pickle(wave) for wave in depends_on.values()]
     covid_data = pd.concat(covid_data_list)
     select_covid = covid_data[["infection_diagnosed", "infection_perceived"]].dropna(
         axis=0, how="all"
     )
-    select_covid["infection_diagnosed"] = select_covid[
-        "infection_diagnosed"
-    ].cat.rename_categories({"yes, I have been diagnosed with it": "yes"})
+    select_covid["infection_diagnosed"] = (
+        select_covid["infection_diagnosed"]
+        .cat.rename_categories({"yes, I have been diagnosed with it": "yes"})
+        .cat.reorder_categories(["no", "unsure", "yes"], ordered=True)
+    )
     # 1: infection diagnosed, 0: not infected diagnosed or unsure
     select_covid["infected"] = select_covid["infection_diagnosed"].eq("yes").astype(int)
 
@@ -120,7 +121,6 @@ def task_clean_infected_data(depends_on, produces):
 )
 @pytask.mark.produces(BLD / "data" / "liss" / "compliance.pickle")
 def task_clean_compliance_data(depends_on, produces):
-
     covid_data = pd.read_pickle(depends_on["covid_data"])
     compliance = covid_data[
         [
@@ -203,7 +203,6 @@ def task_clean_compliance_data(depends_on, produces):
 )
 @pytask.mark.produces(BLD / "data" / "liss" / "work_status.pickle")
 def task_clean_work_status_data(depends_on, produces):
-
     covid_data_list = [pd.read_pickle(wave) for wave in depends_on.values()]
     covid_data = pd.concat(covid_data_list).reset_index("month")
     month = covid_data["month"].replace(
@@ -253,7 +252,6 @@ def task_clean_essential_worker_data(depends_on, produces):
 @pytask.mark.depends_on(SRC / "original_data" / "liss" / "cw19l_EN_3.0p.dta")
 @pytask.mark.produces(BLD / "data" / "liss" / "industry.pickle")
 def task_clean_industry_data(depends_on, produces):
-
     work_schooling = pd.read_stata(depends_on)
     industry_data = work_schooling[["nomem_encr", "cw19l_m", "cw19l402"]]
     industry_data.insert(
